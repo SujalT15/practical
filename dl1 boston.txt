@@ -1,0 +1,388 @@
+
+# --------------------------------------------
+# 📦 1. Importing Necessary Libraries
+# --------------------------------------------
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy import stats
+
+# --------------------------------------------
+# 📥 2. Load the Dataset
+# --------------------------------------------
+column_names = ['CRIM', 'ZN', 'INDUS', 'CHAS', 'NOX', 'RM', 
+                'AGE', 'DIS', 'RAD', 'TAX', 'PTRATIO', 'B', 'LSTAT', 'PRICE']
+
+df = pd.read_csv('housing.csv', header=None, delimiter=r"\s+", names=column_names)
+
+# --------------------------------------------
+# 🔍 3. Basic Exploration
+# --------------------------------------------
+print("Shape of the dataset:", df.shape)
+print(df.head())
+print("\nMissing values:\n", df.isnull().sum())
+print("\nSummary statistics:\n", df.describe())
+df.info()
+
+# --------------------------------------------
+# 📊 4. Visualizing Outliers
+# --------------------------------------------
+fig, axs = plt.subplots(ncols=7, nrows=2, figsize=(20, 10))
+axs = axs.flatten()
+for i, (k, v) in enumerate(df.items()):
+    sns.boxplot(y=v, ax=axs[i])
+    axs[i].set_title(k)
+plt.tight_layout()
+
+# --------------------------------------------
+# 📈 5. Outlier Detection (IQR)
+# --------------------------------------------
+for k, v in df.items():
+    q1 = v.quantile(0.25)
+    q3 = v.quantile(0.75)
+    iqr = q3 - q1
+    outliers = v[(v <= q1 - 1.5 * iqr) | (v >= q3 + 1.5 * iqr)]
+    perc = np.shape(outliers)[0] * 100.0 / np.shape(df)[0]
+    print("Column %s outliers = %.2f%%" % (k, perc))
+
+# --------------------------------------------
+# ✂️ 6. Remove High Outliers from PRICE
+# --------------------------------------------
+df = df[df['PRICE'] < 35.0]
+print("New shape after removing outliers from PRICE:", df.shape)
+
+# --------------------------------------------
+# 📉 7. Distribution of Target Variable (PRICE)
+# --------------------------------------------
+sns.histplot(df['PRICE'], kde=True)
+plt.title("Price Distribution")
+plt.show()
+
+sns.boxplot(x=df['PRICE'])
+plt.title("Boxplot of Prices")
+plt.show()
+
+# --------------------------------------------
+# 🔗 8. Correlation Matrix and Heatmap
+# --------------------------------------------
+correlation = df.corr()
+print(correlation['PRICE'])
+
+plt.figure(figsize=(15,12))
+sns.heatmap(correlation, square=True, annot=True, cmap='coolwarm')
+
+# --------------------------------------------
+# 🔍 9. Scatter Plots for Top Correlated Features
+# --------------------------------------------
+features = ['LSTAT', 'RM', 'PTRATIO']
+plt.figure(figsize=(20,5))
+for i, col in enumerate(features):
+    plt.subplot(1, len(features), i+1)
+    plt.scatter(df[col], df['PRICE'], marker='o')
+    plt.title(f"{col} vs PRICE")
+    plt.xlabel(col)
+    plt.ylabel("PRICE")
+
+# --------------------------------------------
+# 🧮 10. Feature and Target Definition
+# --------------------------------------------
+X = df.iloc[:, :-1]
+y = df['PRICE']
+
+# --------------------------------------------
+# 🧪 11. Train-Test Split
+# --------------------------------------------
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, 
+                                                    test_size=0.2, 
+                                                    random_state=42)
+
+# --------------------------------------------
+# 📐 12. Linear Regression Model
+# --------------------------------------------
+from sklearn.linear_model import LinearRegression
+regressor = LinearRegression()
+regressor.fit(X_train, y_train)
+y_pred_lr = regressor.predict(X_test)
+
+# --------------------------------------------
+# 📏 13. Evaluation of Linear Regression
+# --------------------------------------------
+from sklearn.metrics import mean_squared_error, r2_score
+rmse_lr = np.sqrt(mean_squared_error(y_test, y_pred_lr))
+r2_lr = r2_score(y_test, y_pred_lr)
+print("Linear Regression RMSE:", rmse_lr)
+print("Linear Regression R² Score:", r2_lr)
+
+# --------------------------------------------
+# 📊 14. Standardization
+# --------------------------------------------
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+
+# --------------------------------------------
+# 🧠 15. Neural Network Model using Keras
+# --------------------------------------------
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+
+model = Sequential()
+model.add(Dense(128, activation='relu', input_dim=13))
+model.add(Dense(64, activation='relu'))
+model.add(Dense(32, activation='relu'))
+model.add(Dense(16, activation='relu'))
+model.add(Dense(1))  # Output layer
+
+model.compile(optimizer='adam', loss='mean_squared_error')
+
+# --------------------------------------------
+# 🏋️ 16. Training the Model
+# --------------------------------------------
+model.fit(X_train, y_train.values, epochs=100, verbose=1)
+
+# --------------------------------------------
+# 🔮 17. Prediction and Evaluation of NN Model
+# --------------------------------------------
+y_pred_nn = model.predict(X_test).flatten()
+
+rmse_nn = np.sqrt(mean_squared_error(y_test, y_pred_nn))
+r2_nn = r2_score(y_test, y_pred_nn)
+
+print("Neural Network RMSE:", rmse_nn)
+print("Neural Network R² Score:", r2_nn)
+
+
+
+
+
+
+This code performs data analysis and prediction on the Boston Housing dataset using both traditional Machine Learning (Linear Regression) and Deep Learning (Neural Network). 
+Let's go through it line by line, with both practical explanation and theoretical concepts.
+
+
+
+
+Step	Concept	Description
+1️⃣	Exploratory Data Analysis (EDA) -	  Visualizing outliers, correlations, and distributions helps understand the structure of the data.
+2️⃣	Feature Engineering -	Selecting meaningful features like RM, LSTAT, PTRATIO helps the model generalize well.
+3️⃣	Linear Regression - A simple model that assumes a linear relationship between features and target.
+4️⃣	Neural Network	- A multi-layer perceptron model that captures non-linear relationships for better accuracy.
+5️⃣	RMSE (Root Mean Squared Error)	 - Measures the average error of predictions. Lower = better.
+6️⃣	R² Score	 - Indicates how well the model explains the variation in the data. 1.0 = perfect fit.
+
+
+
+
+
+
+
+
+
+
+1. Importing Libraries
+
+import numpy as np
+import pandas as pd
+numpy: Used for numerical computations and handling arrays.
+
+pandas: For data manipulation and reading/writing datasets (CSV, Excel, etc.).
+
+📥 2. Loading Dataset
+
+column_names = ['CRIM', 'ZN', 'INDUS', 'CHAS', 'NOX', 'RM', 'AGE',
+                'DIS', 'RAD', 'TAX', 'PTRATIO', 'B', 'LSTAT', 'PRICE']
+df = pd.read_csv('housing.csv', header=None, delimiter=r"\s+", names=column_names)
+Defines column names for the dataset.
+
+Reads housing.csv, a whitespace-delimited file (no headers), and assigns the column names.
+
+Dataset contains housing data and target variable PRICE.
+
+📊 3. Data Overview
+
+df.head(5)      # Shows first 5 rows
+df.shape        # Gives dataset dimensions (rows, columns)
+df.describe()   # Summary stats: mean, std, min, max, quartiles
+📦 4. Outlier Detection using Boxplots
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy import stats
+
+fig, axs = plt.subplots(ncols=7, nrows=2, figsize=(20, 10))
+axs = axs.flatten()
+for index, (k, v) in enumerate(df.items()):
+    sns.boxplot(y=k, data=df, ax=axs[index])
+plt.tight_layout()
+Draws boxplots for each column to visually inspect outliers.
+
+Boxplot shows Q1, Q3, median, and whiskers (±1.5*IQR).
+
+🚩 5. Outlier Percentage Calculation
+
+for k, v in df.items():
+    q1 = v.quantile(0.25)
+    q3 = v.quantile(0.75)
+    irq = q3 - q1
+    v_col = v[(v <= q1 - 1.5 * irq) | (v >= q3 + 1.5 * irq)]
+    perc = np.shape(v_col)[0] * 100.0 / np.shape(df)[0]
+    print("Column %s outliers = %.2f%%" % (k, perc))
+Calculates IQR and determines how many values are outside the [Q1 - 1.5*IQR, Q3 + 1.5*IQR] range.
+
+Helps identify how much of the data in each column are outliers.
+
+🧹 6. Remove Price Outliers
+
+df = df[~(df['PRICE'] >= 35.0)]
+print(np.shape(df))
+Removes rows where house price is unusually high (≥ 35.0).
+
+Helps improve model quality by removing extreme values.
+
+✅ 7. Data Checks
+
+df.head()
+print(df.shape)
+df.isnull().sum()
+Displays first few rows, shape of data, and checks for missing values.
+
+📈 8. Plotting PRICE Distribution
+
+sns.histplot(df.PRICE, kde=True)
+sns.boxplot(df.PRICE)
+Histogram shows how house prices are distributed.
+
+KDE shows the smoothed distribution curve.
+
+Boxplot again shows outliers in the target variable PRICE.
+
+🔗 9. Correlation Analysis
+
+correlation = df.corr()
+correlation.loc['PRICE']
+Pearson correlation coefficients between PRICE and other variables.
+
+Helps identify strong predictors (e.g., RM, LSTAT).
+
+🔥 10. Heatmap Visualization
+
+fig, axes = plt.subplots(figsize=(15,12))
+sns.heatmap(correlation, square=True, annot=True)
+Visualizes the correlation matrix.
+
+annot=True displays correlation values in cells.
+
+🧠 11. Scatter Plots of Top Features
+
+features = ['LSTAT','RM','PTRATIO']
+for i, col in enumerate(features):
+    plt.subplot(1, len(features), i+1)
+    plt.scatter(df[col], df.PRICE)
+    plt.title("Variation in House prices")
+    plt.xlabel(col)
+    plt.ylabel('"House prices in $1000"')
+Visualizes relationship of top 3 correlated features with price.
+
+Positive/negative slope indicates direction of correlation.
+
+🔄 12. Feature & Target Separation
+
+X = df.iloc[:,:-1]  # All features
+y = df.PRICE        # Target
+X contains all columns except PRICE.
+
+y is the label column (PRICE).
+
+🧪 13. Train-Test Split
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=4)
+Splits the dataset into training and test sets (80/20 split).
+
+random_state ensures reproducibility.
+
+📈 14. Linear Regression
+
+from sklearn.linear_model import LinearRegression
+regressor = LinearRegression()
+regressor.fit(X_train, y_train)
+y_pred = regressor.predict(X_test)
+Fits a Linear Regression model: y = mx + c.
+
+Predicts house prices on test data.
+
+🧮 15. Model Evaluation (Linear)
+
+from sklearn.metrics import mean_squared_error, r2_score
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+r2 = r2_score(y_test, y_pred)
+print(rmse)
+print(r2)
+RMSE (Root Mean Squared Error): lower is better.
+
+R² score: how well features explain variation in target (1 = perfect).
+
+⚙️ 16. Feature Scaling
+
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+Scales features to have zero mean and unit variance.
+
+Essential for neural networks to converge faster.
+
+🧠 17. Neural Network (Keras)
+
+from keras.models import Sequential
+from keras.layers import Dense
+
+model = Sequential()
+model.add(Dense(128, activation='relu', input_dim=13))
+model.add(Dense(64, activation='relu'))
+model.add(Dense(32, activation='relu'))
+model.add(Dense(16, activation='relu'))
+model.add(Dense(1))
+model.compile(optimizer='adam', loss='mean_squared_error')
+Builds a deep feedforward neural network:
+
+Input → Hidden layers → Output.
+
+relu activation helps with non-linearity.
+
+adam: optimizer for gradient descent.
+
+Loss: mean squared error.
+
+🏋️ 18. Training the Neural Network
+
+model.fit(X_train, y_train, epochs=100)
+Trains the model for 100 passes over training data (epochs).
+
+🧠 19. Neural Network Predictions & Evaluation
+
+y_pred = model.predict(X_test)
+r2 = r2_score(y_test, y_pred)
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+print(r2)
+print(rmse)
+Evaluates deep learning model on test set.
+
+Compares R² and RMSE with linear regression results.
+
+
+
+
+
+🔚 Summary of Concepts
+EDA: Understand and visualize data.
+
+Preprocessing: Outlier removal, scaling.
+
+Regression: Linear model and deep learning.
+
+Evaluation: RMSE and R² to assess accuracy.
+

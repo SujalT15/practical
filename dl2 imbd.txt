@@ -1,0 +1,362 @@
+
+# 1. Load the IMDb dataset
+from keras.datasets import imdb
+(train_data, train_labels), (test_data, test_labels) = imdb.load_data(num_words=10000)
+
+# 2. Show a sample review and its label
+print(train_data[0])
+print(train_labels[0])
+
+# 3. Show maximum word index in training data
+print(type([max(sequence) for sequence in train_data]))
+print(max([max(sequence) for sequence in train_data]))
+
+# 4. Decode the first review to words
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+word_index = imdb.get_word_index()
+reverse_word_index = dict([(value, key) for (key, value) in word_index.items()])
+decoded_review = ' '.join([reverse_word_index.get(i - 3, '?') for i in train_data[0]])
+print(decoded_review)
+
+# 5. Print vocabulary size
+print(len(reverse_word_index))
+
+# 6. One-hot encoding the sequences
+import numpy as np
+def vectorize_sequences(sequences, dimension=10000):
+    results = np.zeros((len(sequences), dimension))
+    for i, sequence in enumerate(sequences):
+        results[i, sequence] = 1
+    return results
+
+xtrain = vectorize_sequences(train_data)
+xtest = vectorize_sequences(test_data)
+
+# 7. Check shape and one-hot encoded sample
+print(xtrain[0])
+print(xtrain.shape)
+
+# 8. Convert labels to float32
+ytrain = np.asarray(train_labels).astype('float32')
+ytest = np.asarray(test_labels).astype('float32')
+
+# 9. Build the neural network model
+from keras import models
+from keras import layers
+
+model = models.Sequential()
+model.add(layers.Dense(16, activation='relu', input_shape=(10000,)))
+model.add(layers.Dense(16, activation='relu'))
+model.add(layers.Dense(1, activation='sigmoid'))
+
+# 10. Compile the model
+from keras import optimizers
+from keras import losses
+from keras import metrics
+
+model.compile(optimizer=optimizers.RMSprop(learning_rate=0.001),
+              loss=losses.binary_crossentropy,
+              metrics=[metrics.binary_accuracy])
+
+# 11. Create validation set
+xval = xtrain[:10000]
+partial_xtrain = xtrain[10000:]
+yval = ytrain[:10000]
+partial_ytrain = ytrain[10000:]
+
+# 12. Train the model
+history = model.fit(partial_xtrain,
+                    partial_ytrain,
+                    epochs=20,
+                    batch_size=512,
+                    validation_data=(xval, yval))
+
+# 13. Analyze training history
+history_dict = history.history
+print(history_dict.keys())
+
+# 14. Plot training and validation loss
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+loss_values = history_dict['loss']
+val_loss_values = history_dict['val_loss']
+epochs = range(1, len(loss_values) + 1)
+
+plt.plot(epochs, loss_values, 'bo', label='Training Loss')
+plt.plot(epochs, val_loss_values, 'b', label='Validation Loss')
+plt.title('Training and Validation Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss Value')
+plt.legend()
+plt.show()
+
+# 15. Plot training and validation accuracy
+acc_values = history_dict['binary_accuracy']
+val_acc_values = history_dict['val_binary_accuracy']
+
+plt.plot(epochs, acc_values, 'ro', label='Training Accuracy')
+plt.plot(epochs, val_acc_values, 'r', label='Validation Accuracy')
+plt.title('Training and Validation Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show()
+
+# 16. Retrain the model with fewer epochs (to prevent overfitting)
+model.fit(partial_xtrain,
+          partial_ytrain,
+          epochs=3,
+          batch_size=512,
+          validation_data=(xval, yval))
+
+# 17. Predict on test data
+np.set_printoptions(suppress=True)
+result = model.predict(xtest)
+print(result)
+
+# 18. Convert predicted probabilities to binary values
+y_pred = np.zeros(len(result))
+for i, score in enumerate(result):
+    y_pred[i] = 1 if score > 0.5 else 0
+
+# 19. Calculate Mean Absolute Error
+from sklearn.metrics import mean_absolute_error
+mae = mean_absolute_error(y_pred, ytest)
+print("Mean Absolute Error:", mae)
+
+
+
+
+
+
+
+1. Load IMDb dataset
+
+from keras.datasets import imdb
+(train_data, train_labels), (test_data, test_labels) = imdb.load_data(num_words=10000)
+Loads IMDb dataset, limiting to the 10,000 most frequent words.
+
+Returns tuples: training & test data (list of integers representing word indices) and labels (1=positive, 0=negative).
+
+2. Inspect training sample
+
+train_data[0]
+Shows the first training review as a list of integers (word indices).
+
+3. Label of the first sample
+
+train_labels[0]
+Prints the label (0 or 1) for the first review.
+
+4. Check vocabulary range
+
+print(type([max(sequence) for sequence in train_data]))
+max([max(sequence) for sequence in train_data])
+Gets the maximum word index used across all training samples.
+
+5. Decode review from integers to words
+
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+word_index = imdb.get_word_index()
+reverse_word_index = dict([(value, key) for (key, value) in word_index.items()])
+decoded_review = ' '.join([reverse_word_index.get(i - 3, '?') for i in train_data[0]])
+decoded_review
+Downloads word-to-index mapping, creates a reverse dictionary, and decodes the first review.
+
+Subtracts 3 because indices 0–2 are reserved.
+
+6. Vocabulary size
+
+len(reverse_word_index)
+Gets the number of unique words in the dataset.
+
+7. Vectorize sequences
+
+import numpy as np
+def vectorize_sequences(sequences, dimension=10000):
+    results = np.zeros((len(sequences), dimension))
+    for i, sequence in enumerate(sequences):
+        results[i, sequence] = 1
+    return results
+
+xtrain = vectorize_sequences(train_data)
+xtest = vectorize_sequences(test_data)
+Converts lists of word indices into binary vectors of size 10,000.
+
+Marks a 1 at each word index present in the review.
+
+8. Check one-hot encoded review
+
+xtrain[0]
+Shows the vectorized form of the first training sample.
+
+9. Check input shape
+
+xtrain.shape
+Shows dimensions: (25000, 10000) — 25,000 reviews, each with a 10,000-dim vector.
+
+10. Convert labels to float
+
+ytrain = np.asarray(train_labels).astype('float32')
+ytest = np.asarray(test_labels).astype('float32')
+Converts labels to float32 for compatibility with Keras.
+
+11. Build neural network
+
+from keras import models
+from keras import layers
+
+model = models.Sequential()
+model.add(layers.Dense(16, activation='relu', input_shape=(10000,)))
+model.add(layers.Dense(16, activation='relu'))
+model.add(layers.Dense(1, activation='sigmoid'))
+A feedforward neural network with:
+
+Two hidden layers (16 neurons, ReLU)
+
+One output layer (sigmoid for binary classification)
+
+12. Compile the model
+
+from keras import optimizers
+from keras import losses
+from keras import metrics
+
+model.compile(optimizer=optimizers.RMSprop(learning_rate=0.001),
+              loss=losses.binary_crossentropy,
+              metrics=[metrics.binary_accuracy])
+Uses:
+
+RMSprop optimizer
+
+Binary crossentropy loss
+
+Binary accuracy metric
+
+13. Create validation set
+
+xval = xtrain[:10000]
+partial_xtrain = xtrain[10000:]
+
+yval = ytrain[:10000]
+partial_ytrain = ytrain[10000:]
+Splits training data: 10,000 for validation, remaining for actual training.
+
+14. Train the model
+
+history = model.fit(partial_xtrain,
+                    partial_ytrain,
+                    epochs=20,
+                    batch_size=512,
+                    validation_data=(xval, yval))
+Trains for 20 epochs, with batch size 512
+
+Records training & validation performance
+
+15. Check training history
+
+history_dict = history.history
+history_dict.keys()
+Returns dictionary containing loss and accuracy values per epoch.
+
+16. Import for plotting
+
+import matplotlib.pyplot as plt
+%matplotlib inline
+Enables inline plotting in Jupyter Notebook.
+
+17. Plot loss
+
+loss_values = history_dict['loss']
+val_loss_values = history_dict['val_loss']
+
+epochs = range(1, len(loss_values)+1)
+
+plt.plot(epochs, loss_values, 'bo', label="Training Loss")
+plt.plot(epochs, val_loss_values, 'b', label="Validation Loss")
+
+plt.title('Training and Validation Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss Value')
+plt.legend()
+plt.show()
+Visualizes overfitting by comparing training and validation loss.
+
+18. Plot accuracy
+
+acc_values = history_dict['binary_accuracy']
+val_acc_values = history_dict['val_binary_accuracy']
+
+plt.plot(epochs, acc_values, 'ro', label="Training Accuracy")
+plt.plot(epochs, val_acc_values, 'r', label="Validation Accuracy")
+
+plt.title('Training and Validation Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show()
+Shows training vs validation accuracy.
+
+19. Retrain model for 3 epochs
+
+model.fit(partial_xtrain,
+          partial_ytrain,
+          epochs=3,
+          batch_size=512,
+          validation_data=(xval, yval))
+Trains again with fewer epochs (3) to avoid overfitting.
+
+20. Predict on test data
+
+np.set_printoptions(suppress=True)
+result = model.predict(xtest)
+Predicts probability scores for test data (values close to 0 or 1).
+
+21. Show predictions
+
+result
+Prints predicted probabilities for test reviews.
+
+22. Convert probabilities to labels
+
+y_pred = np.zeros(len(result))
+for i, score in enumerate(result):
+    y_pred[i] = 1 if score > 0.5 else 0
+Converts predicted probabilities into binary predictions.
+
+23. Evaluate with MAE
+
+from sklearn.metrics import mean_absolute_error
+mae = mean_absolute_error(y_pred, ytest)
+Calculates Mean Absolute Error between predicted and actual labels.
+
+24. Output MAE
+
+mae
+Displays final MAE — lower value indicates better prediction quality.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
