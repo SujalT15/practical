@@ -1,0 +1,332 @@
+#include <iostream>
+#include <vector>
+#include <omp.h>
+#include<ctime>
+
+using namespace std;
+
+void bubbleSort(vector<int>& arr) {
+    int n = arr.size();
+    bool swapped = true;
+
+    while (swapped) {
+        swapped = false;
+        #pragma omp parallel for
+        for (int i = 0; i < n - 1; i++) {
+            if (arr[i] > arr[i + 1]) {
+                swap(arr[i], arr[i + 1]);
+                swapped = true;
+            }
+        }
+    }
+}
+
+void merge(vector<int>& arr, int l, int m, int r) {
+    vector<int> temp;
+    int left = l;
+    int right = m + 1;
+
+    while (left <= m && right <= r) {
+        if (arr[left] <= arr[right]) {
+            temp.push_back(arr[left]);
+            left++;
+        }
+        else {
+            temp.push_back(arr[right]);
+            right++;
+        }
+    }
+
+    while (left <= m) {
+        temp.push_back(arr[left]);
+        left++;
+    }
+
+    while (right <= r) {
+        temp.push_back(arr[right]);
+        right++;
+    }
+
+    for (int i = l; i <= r; i++) {
+        arr[i] = temp[i - l];
+    }
+}
+
+void mergeSort(vector<int>& arr, int l, int r) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+        #pragma omp parallel sections
+        {
+            #pragma omp section
+            mergeSort(arr, l, m);
+            #pragma omp section
+            mergeSort(arr, m + 1, r);
+        }
+        merge(arr, l, m, r);
+    }
+}
+
+int main() {
+    int n;
+    cout << "Enter the number of elements: ";
+    cin >> n;
+
+    vector<int> arr(n);
+    cout << "Enter the elements: ";
+    for (int i = 0; i < n; i++)
+        cin >> arr[i];
+
+    clock_t bubbleStart = clock();
+    bubbleSort(arr);
+    clock_t bubbleEnd = clock();
+    cout << "Sorted array using Bubble Sort: ";
+    for (int num : arr)
+        cout << num << " ";
+    cout << endl;
+
+    clock_t mergeStart = clock();
+    mergeSort(arr, 0, n - 1);
+    clock_t mergeEnd = clock();
+    cout << "Sorted array using Merge Sort: ";
+    for (int num : arr)
+        cout << num << " ";
+    cout << endl;
+
+    double bubbleDuration = double(bubbleEnd-bubbleStart) / CLOCKS_PER_SEC;
+    double mergeDuration = double(mergeEnd-mergeStart) / CLOCKS_PER_SEC;
+
+    cout << "Bubble sort time in seconds: " << bubbleDuration << endl;
+    cout << "Merge sort time in seconds: " << mergeDuration << endl;
+
+    return 0;
+}
+
+
+
+
+
+
+
+
+
+In the parallel merge sort, the recursive calls to mergeSort on the two halves of the array are executed in parallel using OpenMP.
+
+This means that both halves of the array can be sorted simultaneously, which speeds up the sorting process on multi-core processors.
+
+
+
+
+What is Bubble Sort?
+
+Bubble Sort is a simple comparison-based sorting algorithm. The algorithm repeatedly steps through the list, compares adjacent elements, and swaps them if they are in the wrong order.
+
+This process is repeated until the list is sorted.
+
+The algorithm gets its name from the way smaller elements "bubble" to the top (beginning of the list).
+
+
+
+What is Parallel Bubble Sort?
+In this implementation, the inner loop (which checks each adjacent pair) is parallelized using OpenMP (#pragma omp parallel for).
+
+However, this parallelization is not ideal because the Bubble Sort algorithm relies on adjacent comparisons and swaps, which may cause issues when done in parallel due to inter-thread dependencies.
+
+
+
+
+Step-by-Step Explanation of Bubble Sort:
+Function Definition:
+
+void bubbleSort(vector<int>& arr) takes a reference to a vector of integers and sorts it in ascending order using the Bubble Sort algorithm.
+
+Variables:
+
+n = arr.size() gets the size of the array.
+
+bool swapped = true; initializes a flag swapped to check if any element has been swapped. If no swaps occur, the array is sorted.
+
+While Loop:
+
+while (swapped) means the algorithm will continue until no swaps are made. This ensures that the array is fully sorted.
+
+Reset the swapped flag:
+
+swapped = false; sets the flag to false at the beginning of each iteration, assuming no swaps have occurred yet.
+
+Parallelized Loop with OpenMP:
+
+#pragma omp parallel for tells the compiler to execute the following loop in parallel (using multiple threads).
+
+for (int i = 0; i < n - 1; i++) loops through the array comparing each adjacent pair of elements.
+
+If Statement for Swap:
+
+if (arr[i] > arr[i + 1]) checks if the current element is greater than the next element.
+
+swap(arr[i], arr[i + 1]); swaps the elements if the condition is true.
+
+swapped = true; sets the flag to true indicating that a swap has been made.
+
+Exit Condition:
+
+The loop continues until no swaps are made in a complete iteration, indicating the array is sorted.
+
+
+
+
+
+
+
+
+What is Parallel Bubble Sort?
+Bubble Sort is a simple sorting algorithm where each pair of adjacent elements is compared and swapped if necessary.
+
+In the parallelized version, OpenMP (#pragma omp parallel for) allows different iterations of the loop to be processed simultaneously, potentially speeding up the sorting process.
+
+Note: In the case of Bubble Sort, parallelization doesn't provide significant performance gains because the algorithm involves dependent comparisons and swaps. True parallel efficiency is seen in more complex algorithms like Merge Sort.
+
+
+
+
+
+Step-by-Step Explanation of the merge Function:
+Purpose:
+
+The merge function merges two sorted subarrays into one sorted array.
+
+Temporary Array:
+
+vector<int> temp; creates a temporary array to hold the merged results.
+
+Left and Right Pointers:
+
+int left = l; and int right = m + 1; initialize two pointers: left starts at the beginning of the left subarray, and right starts at the beginning of the right subarray.
+
+Merging Two Halves:
+
+The while loop compares the elements in both subarrays and merges them in sorted order.
+
+If arr[left] <= arr[right], the element from the left subarray is added to temp. Otherwise, the element from the right subarray is added to temp.
+
+Handling Leftovers:
+
+After the merge loop, there may still be elements in one of the subarrays. The next while loops copy the remaining elements from the left or right subarray into temp.
+
+Copying Back to Original Array:
+
+Finally, the merged elements from temp are copied back into the original array arr.
+
+
+
+
+
+
+
+
+Step-by-Step Explanation of the mergeSort Function:
+Recursive Sorting:
+
+mergeSort is a recursive function that divides the array into two halves and sorts each half recursively.
+
+Base Condition:
+
+if (l < r) checks if the array has more than one element. If not, it simply returns (base case of recursion).
+
+Find Middle Index:
+
+int m = l + (r - l) / 2; calculates the middle index of the array.
+
+Parallel Recursive Calls:
+
+The #pragma omp parallel sections directive tells the compiler to execute the two recursive calls in parallel.
+
+One section sorts the left half, and the other section sorts the right half.
+
+Merge the Halves:
+
+After sorting both halves, the merge function is called to combine them into a single sorted array.
+
+
+
+//comparison
+
+
+1. Merge Sort vs Parallel Merge Sort
+Merge Sort:
+
+Type: Divide-and-Conquer algorithm.
+
+Time Complexity: O(n log n) — both in the worst, average, and best cases.
+
+How It Works:
+
+The array is recursively divided into two halves until each subarray has only one element.
+
+These subarrays are then merged back in sorted order.
+
+The merging process is what takes time (linear complexity in each pass).
+
+Key Characteristics:
+
+It is a stable, efficient sorting algorithm.
+
+The time complexity does not depend on the initial order of the elements.
+
+Parallel Merge Sort:
+
+Parallelization: The recursive calls to sort the left and right halves are performed in parallel, using multi-core processors.
+
+Parallel Time Complexity: O((n log n) / p), where p is the number of available processors or threads.
+
+This is assuming ideal parallelization and no overhead.
+
+How It Works:
+
+Instead of recursively sorting each half in sequence (one after the other), both halves are sorted simultaneously using multiple threads.
+
+The merge operation still happens sequentially.
+
+Key Characteristics:
+
+Parallel Merge Sort is significantly faster on systems with multiple processors or cores.
+
+The time complexity of parallelized merge sort decreases compared to the standard merge sort, but the improvement depends on the number of processors (p) and the algorithm's parallel efficiency.
+
+2. Bubble Sort vs Parallel Bubble Sort
+Bubble Sort:
+
+Type: Comparison-based sorting algorithm.
+
+Time Complexity: O(n²) in the worst and average cases. The best case (when the array is already sorted) is O(n) if optimized to stop early when no swaps occur.
+
+How It Works:
+
+The algorithm repeatedly iterates through the array.
+
+It compares adjacent elements and swaps them if they are in the wrong order.
+
+Each pass ensures the largest unsorted element is placed at the end.
+
+Key Characteristics:
+
+It is simple but inefficient for large datasets.
+
+Not suitable for sorting large arrays as its time complexity grows quadratically.
+
+Parallel Bubble Sort:
+
+Parallelization: The idea is to split the work of comparing and swapping elements across multiple threads.
+
+How It Works:
+
+With OpenMP or another parallel processing library, the iterations of the Bubble Sort algorithm can be parallelized.
+
+For example, we can compare and swap adjacent elements in parallel, though synchronization might be needed to handle the shared swapped flag and avoid race conditions.
+
+Key Characteristics:
+
+Limited Efficiency Gains: Although we parallelize the comparison and swap steps, Bubble Sort is inherently inefficient for large datasets. Parallelization doesn’t provide significant speedup due to the dependency between elements (e.g., you need to complete one comparison before moving to the next).
+
+Time Complexity:
+
+The time complexity for parallelized Bubble Sort is still O(n²), but the constant factors might reduce due to parallel execution.

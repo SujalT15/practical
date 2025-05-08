@@ -1,0 +1,218 @@
+#include <iostream>
+#include <vector>
+#include <omp.h>
+using namespace std;
+
+int main() {
+    // Sample training data (y = 2x + 1)
+    vector<double> x = {1, 2, 3, 4, 5};
+    vector<double> y = {3, 5, 7, 9, 11};
+
+    double m = 0, b = 0; // model parameters
+    double lr = 0.01;    // learning rate
+    int n = x.size();
+    int epochs = 100;
+
+    for (int e = 1; e <= epochs; ++e) {
+        double grad_m = 0, grad_b = 0;
+
+        // Parallel gradient calculation
+        #pragma omp parallel for reduction(+:grad_m, grad_b)
+        for (int i = 0; i < n; ++i) {
+            double pred = m * x[i] + b;
+            double error = pred - y[i];
+            grad_m += error * x[i];
+            grad_b += error;
+        }
+
+        // Update model parameters
+        m -= lr * grad_m / n;
+        b -= lr * grad_b / n;
+
+        // Print progress every 20 epochs
+        if (e % 20 == 0)
+            cout << "Epoch " << e << ": m = " << m << ", b = " << b << endl;
+    }
+
+    cout << "\nFinal model: y = " << m << " * x + " << b << endl;
+    double test_x = 6;
+    cout << "Prediction for x = " << test_x << ": y = " << (m * test_x + b) << endl;
+
+    return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Theory:
+The code implements Linear Regression using Gradient Descent optimization with Parallel Computing 
+using OpenMP.Linear Regression is a fundamental machine learning algorithm used to model the
+ relationship between a dependent variable y and an independent variable x by fitting a linear equation to the observed data.
+
+In this case, the model assumes that the relationship between x and y follows the equation
+
+y=mx+b, where:
+
+m is the slope (the weight/gradient),
+
+b is the y-intercept (the bias),
+
+x is the input feature, and
+
+y is the output.
+
+Gradient Descent is used to minimize the error (difference between predicted and actual values), and OpenMP is used to parallelize the computation of gradients for faster performance.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#include <iostream>
+#include <vector>
+#include <omp.h>
+using namespace std;
+#include <iostream>: Includes the standard I/O library for handling console input and output.
+
+#include <vector>: Includes the vector library, which allows dynamic array-like structures (used for storing data).
+
+#include <omp.h>: Includes the OpenMP library for parallel programming, enabling parallel processing.
+
+using namespace std;: Avoids the need to prefix std:: before standard types and functions (like cout, vector, etc.).
+
+
+vector<double> x = {1, 2, 3, 4, 5};
+vector<double> y = {3, 5, 7, 9, 11};
+x: A vector containing input values (features).
+
+y: A vector containing output values (target labels) corresponding to the input values in x.
+
+The relationship between x and y follows the equation 
+𝑦
+=
+2
+𝑥
++
+1
+y=2x+1. This is the true underlying model.
+
+
+double m = 0, b = 0; // model parameters
+double lr = 0.01;    // learning rate
+int n = x.size();
+int epochs = 100;
+m = 0, b = 0;: Initializes the model parameters m (slope) and b (intercept) to 0. These are the parameters to be optimized by gradient descent.
+
+lr = 0.01;: The learning rate, which controls how much the model parameters are adjusted at each iteration.
+
+n = x.size();: The number of data points in the training set (size of x and y).
+
+epochs = 100;: The number of iterations (epochs) for the gradient descent algorithm to run.
+
+
+for (int e = 1; e <= epochs; ++e) {
+    double grad_m = 0, grad_b = 0;
+for (int e = 1; e <= epochs; ++e): A loop that runs for a number of epochs (iterations), where in each iteration, the model parameters (m and b) are updated.
+
+grad_m = 0, grad_b = 0;: Initializes the gradient values for m and b to zero at the beginning of each epoch.
+
+
+#pragma omp parallel for reduction(+:grad_m, grad_b)
+for (int i = 0; i < n; ++i) {
+    double pred = m * x[i] + b;
+    double error = pred - y[i];
+    grad_m += error * x[i];
+    grad_b += error;
+}
+#pragma omp parallel for reduction(+:grad_m, grad_b): This OpenMP directive parallelizes the for loop. The loop is divided into chunks and executed concurrently by multiple threads. The reduction(+:grad_m, grad_b) ensures that the gradients grad_m and grad_b are safely updated across all threads.
+
+reduction(+:grad_m, grad_b): This ensures that each thread has its own local copy of grad_m and grad_b, and at the end of the loop, the results are combined (summed up) safely.
+
+for (int i = 0; i < n; ++i): A loop that iterates through the data points.
+
+double pred = m * x[i] + b;: Computes the predicted value for the i-th data point using the current values of m and b.
+
+double error = pred - y[i];: Calculates the error (difference between predicted and actual y[i]).
+
+grad_m += error * x[i];: Updates the gradient for the slope m.
+
+grad_b += error;: Updates the gradient for the intercept b.
+
+
+m -= lr * grad_m / n;
+b -= lr * grad_b / n;
+m -= lr * grad_m / n;: Updates the value of m (slope) by subtracting the product of the learning rate (lr) and the average gradient of m.
+
+b -= lr * grad_b / n;: Updates the value of b (intercept) by subtracting the product of the learning rate (lr) and the average gradient of b.
+
+By updating m and b this way, the model is gradually minimizing the error between predicted and actual values over multiple epochs.
+
+
+if (e % 20 == 0)
+    cout << "Epoch " << e << ": m = " << m << ", b = " << b << endl;
+if (e % 20 == 0): Prints the progress every 20 epochs.
+
+cout << "Epoch " << e << ": m = " << m << ", b = " << b << endl;: Displays the values of m and b at the current epoch.
+
+
+cout << "\nFinal model: y = " << m << " * x + " << b << endl;
+After all epochs are completed, this line prints the final model equation 
+𝑦
+=
+𝑚
+𝑥
++
+𝑏
+y=mx+b, showing the optimized values of m and b.
+
+
+double test_x = 6;
+cout << "Prediction for x = " << test_x << ": y = " << (m * test_x + b) << endl;
+double test_x = 6;: Defines a new test input x = 6.
+
+cout << "Prediction for x = " << test_x << ": y = " << (m * test_x + b) << endl;: Uses the trained model (m and b) to predict the value of y for the test input x = 6.
+
+
+return 0;
+return 0;: Indicates successful execution of the program.
+
+
+
+
+
+
+
+
+Key Concepts:
+Linear Regression: A supervised learning algorithm used for predicting a continuous target variable y based on one or more input features x.
+
+Cost Function: The Mean Squared Error (MSE) is minimized using gradient descent, and it’s the function that this code aims to minimize.
+
+Gradient Descent: An optimization algorithm that updates the model parameters (slope m and intercept b) to minimize the error between the predicted and actual values.
+
+Parallel Computing with OpenMP: OpenMP helps to parallelize the loop that computes the gradients, thus speeding up the process when running on multi-core processors.
+

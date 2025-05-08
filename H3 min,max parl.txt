@@ -1,0 +1,234 @@
+#include <iostream>
+#include <vector>
+#include <omp.h>
+using namespace std;
+
+int parallelMin(vector<int> vec) {
+    int min_val = vec[0];
+    #pragma omp parallel for
+    for (int i = 1; i < vec.size(); i++) {
+        if (vec[i] < min_val) {
+            min_val = vec[i];
+        }
+    }
+    return min_val;
+}
+
+int parallelMax(vector<int> vec) {
+    int max_val = vec[0];
+    #pragma omp parallel for
+    for (int i = 1; i < vec.size(); i++) {
+        if (vec[i] > max_val) {
+            max_val = vec[i];
+        }
+    }
+    return max_val;
+}
+
+int parallelSum(vector<int> vec) {
+    int sum = 0;
+    #pragma omp parallel for
+    for (int i = 0; i < vec.size(); i++) {
+        sum += vec[i];
+    }
+    return sum;
+}
+
+float parallelAverage(vector<int> vec) {
+    int sum = parallelSum(vec);
+    float avg = float(sum) / vec.size();
+    return avg;
+}
+
+int main() {
+    int n;
+    cout << "Enter the number of elements: ";
+    cin >> n;
+
+    vector<int> vec(n);
+    cout << "Enter the elements: ";
+    for (int i = 0; i < n; ++i) {
+        cin >> vec[i];
+    }
+
+    int min_val = parallelMin(vec);
+    cout << "Minimum value: " << min_val << endl;
+
+    int max_val = parallelMax(vec);
+    cout << "Maximum value: " << max_val << endl;
+
+    int sum = parallelSum(vec);
+    cout << "Sum of values: " << sum << endl;
+
+    float avg = parallelAverage(vec);
+    cout << "Average of values: " << avg << endl;
+
+    return 0;
+}
+
+
+
+
+
+Theory:
+This program demonstrates how to perform basic array operations (finding minimum, maximum, sum, and average) in parallel using OpenMP (Open Multi-Processing), which is a parallel programming model for shared-memory systems.
+
+OpenMP Directives:
+
+#pragma omp parallel for is an OpenMP directive used to parallelize the for loop. It divides the loop iterations among available threads to execute them concurrently.
+
+OpenMP is typically used for multi-threading to speed up the execution of loops or tasks that can be broken down into independent operations.
+
+
+#include <iostream>
+#include <vector>
+#include <omp.h>
+using namespace std;
+#include <iostream>: Includes the standard input-output stream library for handling console input and output.
+
+#include <vector>: Includes the vector library, which is a dynamic array (or list) to store elements.
+
+#include <omp.h>: Includes the OpenMP header file, which provides functions and directives for parallel programming.
+
+using namespace std;: Avoids needing to prefix std:: before standard library types (like cout, vector, etc.).
+
+
+int parallelMin(vector<int> vec) {
+    int min_val = vec[0];
+    #pragma omp parallel for
+    for (int i = 1; i < vec.size(); i++) {
+        if (vec[i] < min_val) {
+            min_val = vec[i];
+        }
+    }
+    return min_val;
+}
+Function: parallelMin:
+
+Input: A vector of integers (vec).
+
+Output: The minimum value in the vector.
+
+Theory: This function uses OpenMP to attempt to find the minimum value in a vector in parallel. However, the min_val update isn't thread-safe, which could cause a data race (incorrect results) in parallel execution. A proper reduction operation should be used in OpenMP to ensure thread safety (which is not done here).
+
+int min_val = vec[0];: Initializes min_val to the first element of the vector.
+
+#pragma omp parallel for: Tells the compiler to parallelize the following for loop. This means that the iterations of the loop will be distributed among available threads for concurrent execution.
+
+for (int i = 1; i < vec.size(); i++) {: Iterates through the vector starting from index 1 (since index 0 is already used as the initial minimum).
+
+if (vec[i] < min_val) { min_val = vec[i]; }: Compares each element with min_val, and if an element is smaller, it updates min_val. However, this part could cause issues in parallel execution due to the lack of synchronization.
+
+return min_val;: After all iterations, the minimum value is returned.
+
+
+int parallelMax(vector<int> vec) {
+    int max_val = vec[0];
+    #pragma omp parallel for
+    for (int i = 1; i < vec.size(); i++) {
+        if (vec[i] > max_val) {
+            max_val = vec[i];
+        }
+    }
+    return max_val;
+}
+Function: parallelMax:
+
+Input: A vector of integers (vec).
+
+Output: The maximum value in the vector.
+
+Similar to parallelMin, this function attempts to find the maximum value in parallel using OpenMP. Again, the issue of thread safety arises here as well, which should be addressed with a proper OpenMP reduction or critical section.
+
+
+int parallelSum(vector<int> vec) {
+    int sum = 0;
+    #pragma omp parallel for
+    for (int i = 0; i < vec.size(); i++) {
+        sum += vec[i];
+    }
+    return sum;
+}
+Function: parallelSum:
+
+Input: A vector of integers (vec).
+
+Output: The sum of all elements in the vector.
+
+Theory: This function calculates the sum of all elements in the vector in parallel. However, it suffers from a similar thread-safety issue as the previous two functions, where multiple threads can try to update the sum variable simultaneously. OpenMP’s reduction clause should be used to handle this safely.
+
+
+float parallelAverage(vector<int> vec) {
+    int sum = parallelSum(vec);
+    float avg = float(sum) / vec.size();
+    return avg;
+}
+Function: parallelAverage:
+
+Input: A vector of integers (vec).
+
+Output: The average of all elements in the vector.
+
+Theory: The average is calculated by dividing the sum of the vector elements by the number of elements. The sum is computed by calling the parallelSum function (which runs in parallel). Again, the issue of thread safety arises in the parallelSum function.
+
+
+int main() {
+    int n;
+    cout << "Enter the number of elements: ";
+    cin >> n;
+int main(): The main function where the program starts.
+
+int n;: Declares an integer variable n for the number of elements in the vector.
+
+cout << "Enter the number of elements: ";: Prompts the user to input the number of elements.
+
+cin >> n;: Accepts the number of elements as input from the user.
+
+
+    vector<int> vec(n);
+    cout << "Enter the elements: ";
+    for (int i = 0; i < n; ++i) {
+        cin >> vec[i];
+    }
+vector<int> vec(n);: Declares a vector vec of size n.
+
+cout << "Enter the elements: ";: Prompts the user to enter the vector elements.
+
+for (int i = 0; i < n; ++i): Iterates to accept all the vector elements.
+
+cin >> vec[i];: Takes the input for each element in the vector.
+
+
+    int min_val = parallelMin(vec);
+    cout << "Minimum value: " << min_val << endl;
+
+    int max_val = parallelMax(vec);
+    cout << "Maximum value: " << max_val << endl;
+
+    int sum = parallelSum(vec);
+    cout << "Sum of values: " << sum << endl;
+
+    float avg = parallelAverage(vec);
+    cout << "Average of values: " << avg << endl;
+Function Calls:
+
+parallelMin(vec): Calls the parallelMin function to find the minimum value and stores the result in min_val.
+
+parallelMax(vec): Calls the parallelMax function to find the maximum value and stores the result in max_val.
+
+parallelSum(vec): Calls the parallelSum function to calculate the sum and stores the result in sum.
+
+parallelAverage(vec): Calls the parallelAverage function to calculate the average and stores the result in avg.
+
+Output: Prints the minimum value, maximum value, sum, and average to the console.
+
+
+    return 0;
+}
+return 0;: Returns 0 to indicate successful execution.
+
+
+
+
+
+

@@ -1,0 +1,400 @@
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <omp.h>
+
+using namespace std;
+
+struct Graph {
+    int V;
+    vector<vector<int>> adj;
+
+    Graph(int V) {
+        this->V = V;
+        adj.resize(V);
+    }
+
+    void addEdge(int u, int v) {
+        adj[u].push_back(v);
+        adj[v].push_back(u);
+    }
+
+    void BFS(int start) {
+        vector<bool> visited(V, false);
+        queue<int> q;
+        visited[start] = true;
+        q.push(start);
+
+        while (!q.empty()) {
+            int u = q.front();
+            q.pop();
+            cout << u << " ";
+
+            #pragma omp parallel for
+            for (int i = 0; i < adj[u].size(); i++) {
+                int v = adj[u][i];
+                if (!visited[v]) {
+                    #pragma omp critical
+                    {
+                        visited[v] = true;
+                        q.push(v);
+                    }
+                }
+            }
+        }
+        cout << endl;
+    }
+
+    void DFS(int start) {
+        vector<bool> visited(V, false);
+        #pragma omp parallel
+        {
+            #pragma omp single nowait
+            {
+                DFSUtil(start, visited);
+            }
+        }
+        cout << endl;
+    }
+
+    void DFSUtil(int u, vector<bool>& visited) {
+        visited[u] = true;
+        cout << u << " ";
+
+        # pragma omp parallel for
+        for (int i = 0; i < adj[u].size(); i++) {
+            int v = adj[u][i];
+            if (!visited[v]) {
+                DFSUtil(v, visited);
+            }
+        }
+    }
+};
+
+int main() {
+    int V;
+    cout << "Enter the number of vertices: ";
+    cin >> V;
+
+    Graph g(V);
+
+    int edgeCount;
+    cout << "Enter the number of edges: ";
+    cin >> edgeCount;
+
+    cout << "Enter the edges (in format 'source destination'): \n";
+    for (int i = 0; i < edgeCount; i++) {
+        int u, v;
+        cin >> u >> v;
+        g.addEdge(u, v);
+    }
+
+    cout << "BFS traversal starting from node 0: ";
+    g.BFS(0);
+
+    cout << "DFS traversal starting from node 0: ";
+    g.DFS(0);
+
+    return 0;
+}
+
+
+
+
+
+
+
+
+
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <omp.h>
+🔹 Includes necessary libraries:
+
+<iostream>: for input/output
+
+<vector>: to use dynamic arrays for adjacency lists
+
+<queue>: for BFS traversal
+
+<omp.h>: for OpenMP (parallel programming in C++)
+
+
+using namespace std;
+🔹 Avoids having to write std:: repeatedly.
+
+
+struct Graph {
+    int V;
+    vector<vector<int>> adj;
+🔹 Defines a Graph structure:
+
+V stores number of vertices.
+
+adj is an adjacency list (a vector of vectors) to store edges.
+
+
+
+    Graph(int V) {
+        this->V = V;
+        adj.resize(V);
+    }
+🔹 Constructor:
+Initializes the graph with V vertices and resizes the adjacency list accordingly.
+
+
+    void addEdge(int u, int v) {
+        adj[u].push_back(v);
+        adj[v].push_back(u);
+    }
+🔹 Adds an undirected edge between nodes u and v.
+
+    void BFS(int start) {
+        vector<bool> visited(V, false);
+        queue<int> q;
+🔹 visited: tracks visited nodes to avoid repetition.
+🔹 q: queue to manage nodes during BFS traversal.
+
+
+        visited[start] = true;
+        q.push(start);
+🔹 Marks the start node as visited and adds it to the queue.
+
+
+        while (!q.empty()) {
+            int u;
+
+            #pragma omp critical
+            {
+                u = q.front();
+                q.pop();
+            }
+
+            cout << u << " ";
+🔹 While queue is not empty:
+
+Safely pop the front node using #pragma omp critical to prevent race conditions when accessing the queue in parallel.
+
+
+            #pragma omp parallel for
+            for (int i = 0; i < adj[u].size(); i++) {
+                int v = adj[u][i];
+
+                #pragma omp critical
+                {
+                    if (!visited[v]) {
+                        visited[v] = true;
+                        q.push(v);
+                    }
+                }
+            }
+        }
+        cout << endl;
+    }
+🔹 Iterates over all neighbors of u in parallel.
+🔹 Inside a critical section, it checks and marks v as visited and adds it to the queue to avoid data races.
+
+
+    void DFS(int start) {
+        vector<bool> visited(V, false);
+        DFSUtil(start, visited);
+        cout << endl;
+    }
+🔹 DFS entry function: initializes visited list and calls helper function DFSUtil.
+
+
+    void DFSUtil(int u, vector<bool>& visited) {
+        visited[u] = true;
+        cout << u << " ";
+🔹 Marks current node u as visited and prints it.
+
+        for (int v : adj[u]) {
+            if (!visited[v]) {
+                DFSUtil(v, visited); // Recursive call
+            }
+        }
+    }
+🔹 Recursively visits all unvisited neighbors.
+🔸 Note: DFS is kept sequential here to avoid unsafe recursion in parallel.
+
+
+int main() {
+    int V, edgeCount;
+    cout << "Enter the number of vertices: ";
+    cin >> V;
+🔹 Main function starts. Asks user for number of vertices.
+
+
+    Graph g(V);
+
+    cout << "Enter the number of edges: ";
+    cin >> edgeCount;
+🔹 Creates a graph object g. Asks user for number of edges.
+
+
+    cout << "Enter the edges (in format 'source destination'): \n";
+    for (int i = 0; i < edgeCount; i++) {
+        int u, v;
+        cin >> u >> v;
+        g.addEdge(u, v);
+    }
+🔹 Takes edgeCount number of inputs and adds them to the graph.
+
+
+    cout << "BFS traversal starting from node 0: ";
+    g.BFS(0);
+🔹 Performs BFS traversal from node 0.
+
+
+    cout << "DFS traversal starting from node 0: ";
+    g.DFS(0);
+
+    return 0;
+}
+🔹 Performs DFS traversal from node 0 and ends the program.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+BFS (Breadth-First Search)
+BFS is an algorithm used to traverse or search through a graph or tree data structure. It explores all the nodes at the present level before moving on to nodes at the next level.
+
+Key Characteristics:
+Level-order Traversal: BFS visits all nodes at the current level before proceeding to the next level.
+
+Queue-Based: BFS uses a queue to keep track of the nodes to be explored. This ensures that nodes are explored in a first-come, first-served manner.
+
+Shortest Path in Unweighted Graphs: BFS is useful for finding the shortest path between two nodes in an unweighted graph because it explores all the nearest neighbors first.
+
+Steps for BFS:
+Start by enqueueing the starting node and mark it as visited.
+
+While the queue is not empty:
+
+Dequeue the node from the front of the queue.
+
+Visit all its unvisited neighbors.
+
+Enqueue each unvisited neighbor and mark them as visited.
+
+Example:
+Consider a graph:
+
+mathematica
+Copy
+Edit
+  A
+ / \
+B   C
+|   |
+D   E
+BFS starting from node A:
+
+Queue: [A]
+
+Visit A, enqueue B, C.
+
+Queue: [B, C]
+
+Visit B, enqueue D.
+
+Queue: [C, D]
+
+Visit C, enqueue E.
+
+Queue: [D, E]
+
+Visit D.
+
+Queue: [E]
+
+Visit E.
+
+Queue: []
+
+Result: A → B → C → D → E
+
+DFS (Depth-First Search)
+DFS is another algorithm used for traversing or searching through a graph or tree, but it explores as far as possible along a branch before backtracking.
+
+Key Characteristics:
+Pre-order Traversal: DFS explores a node and then dives into each of its unvisited neighbors, moving deeper into the graph before visiting nodes on the same level.
+
+Stack-Based: DFS can be implemented using either a recursive function or an explicit stack. The stack keeps track of the nodes that need to be explored.
+
+Path Finding: DFS is good for finding a path in a graph, especially if there’s no concern about the path length or if you want to visit all nodes.
+
+Steps for DFS:
+Start by pushing the starting node onto the stack and mark it as visited.
+
+While the stack is not empty:
+
+Pop the node from the stack.
+
+Visit all its unvisited neighbors.
+
+Push each unvisited neighbor onto the stack and mark them as visited.
+
+Example:
+Using the same graph as above:
+
+DFS starting from node A:
+
+Stack: [A]
+
+Visit A, push B, C onto the stack.
+
+Stack: [B, C]
+
+Visit B, push D onto the stack.
+
+Stack: [C, D]
+
+Visit D.
+
+Stack: [C]
+
+Visit C, push E onto the stack.
+
+Stack: [E]
+
+Visit E.
+
+Stack: []
+
+Result: A → B → D → C → E
+
+Key Differences between BFS and DFS:
+Order of Exploration:
+
+BFS explores level by level.
+
+DFS explores as far down a branch as possible before backtracking.
+
+Data Structure Used:
+
+BFS uses a queue.
+
+DFS uses a stack or recursion.
+
+Applications:
+
+BFS is often used for shortest path problems.
+
+DFS is useful for problems like topological sorting, detecting cycles, and pathfinding.
+
+Let me know if you'd like more details on how to implement either of these algorithms!
+
